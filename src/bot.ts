@@ -130,7 +130,7 @@ export const deleteMessage = (msg: Message, times: number = 10) => {
         try {
             await bot.deleteMessage(msg.chat.id, `${msg.message_id}`)
         } catch (error) {
-            console.log(error.message);
+            console.error(error.message);
         }
     }, times * 1000)
 }
