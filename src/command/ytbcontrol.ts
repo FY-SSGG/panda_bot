@@ -368,7 +368,7 @@ function channelidGet(id: string, msg: Message, messageId: number) {
     .then(response => {
       const Channel = response.data.items[0]
 
-      event[Channel.id] = {
+      event[Channel.id] = event[Channel.id] ?? {
         channelName: Channel.snippet.customUrl,
         definition: null,
         autoRecorder: null
