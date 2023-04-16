@@ -1,5 +1,5 @@
 import bot, { Command, deleteMessage } from "../bot";
-import axios, {AxiosBasicCredentials, AxiosRequestConfig} from "axios";
+import axios, { AxiosBasicCredentials, AxiosRequestConfig } from "axios";
 //@ts-ignore
 import { CallbackQuery, Message, InlineKeyboardButton } from "node-telegram-bot-api";
 
@@ -13,8 +13,8 @@ export const command = new Command(
 )
 const BURL = process.env.BURL;
 const auth: AxiosBasicCredentials = { username: process.env.BUSERNAME || '', password: process.env.BPASSWORD || '', };
-const config1: AxiosRequestConfig = { headers: { 'accept': 'text/plain' },auth,};
-const config2: AxiosRequestConfig = { headers: { 'accept': 'text/plain', 'Content-Type': 'text/json' },auth, };
+const config1: AxiosRequestConfig = { headers: { 'accept': 'text/plain' }, auth, };
+const config2: AxiosRequestConfig = { headers: { 'accept': 'text/plain', 'Content-Type': 'text/json' }, auth, };
 const config3: AxiosRequestConfig = { headers: { 'accept': 'text/plain', 'Content-Type': 'application/json-patch+json' }, auth, };
 
 async function handler(msg: Message) {
@@ -39,7 +39,7 @@ async function handler(msg: Message) {
                 roomdefault(msg.from.id, 'split', Number(msg.text.split(" ")[2]))
                 break;
             case 'add'://增加
-                roomadd(msg.from.id,Number(msg.text.split(" ")[2]), !!msg.text.split(" ")[3])
+                roomadd(msg.from.id, Number(msg.text.split(" ")[2]), !!msg.text.split(" ")[3])
                 //msg.text.split(" ")[3]为空的话就是false
                 break;
             case 'delete'://删除
@@ -67,43 +67,13 @@ async function handler(msg: Message) {
                 set(msg.from.id, msg.text.split(" ")[2], msg.text.split(" ")[3], msg.text.split(" ")[4], Number())
                 break;
             default:
-                axios.get(`${BURL}/api/room`, config1)
-                    .then(response => {
-                        //打印列表
-                        let an_jian = [
-                            [
-                                {
-                                    text: '增加',
-                                    callback_data: `bilibilicontrol add`
-                                }
-                            ]
-                        ]
-                        let row = []
-                        response.data.forEach((room: { streaming: boolean; recording: boolean; name: string; roomId: number; }, index:number) => {
-                            row.push({
-                                text: `${room.streaming === true ? (room.recording === true ? '✓' : '✗') : ''} ${room.name}`,
-                                callback_data: `bilibilicontrol ${room.name} ${room.roomId}`
-                            })
-
-                            // 每添加两个按键，就将该行按键添加到按键列表
-                            if ((index + 1) % 2 === 0) {
-                                an_jian.push(row)
-                                row = []
-                            }
-                        })
-
-                        // 如果最后还有剩余的按键，则添加到列表中
-                        if (row.length > 0) {
-                            an_jian.push(row)
-                        }
-
-                        bot.sendMessage(msg.from.id, '<b>BililiveRecorder_API</b> 更多用法：<code>/bili help</code>', {
-                            reply_markup: {
-                                inline_keyboard: an_jian
-                            },
-                            parse_mode: 'HTML'
-                        }).then(res => { deleteMessage(res, 60) })
-                    }).catch(error => { console.error(error); });
+                const an_jian: InlineKeyboardButton[][] = await getMessage()
+                bot.sendMessage(msg.from.id, '<b>BililiveRecorder_API</b> 更多用法：<code>/bili help</code>', {
+                    reply_markup: {
+                        inline_keyboard: an_jian
+                    },
+                    parse_mode: 'HTML'
+                }).then(res => { deleteMessage(res, 60) })
                 break;
         }
 
@@ -115,6 +85,7 @@ async function handler(msg: Message) {
 
 async function callback(query: CallbackQuery) {
     const { data, message } = query
+
     //console.log(JSON.stringify(query, null, 2))
     const args = data?.split(" ")
     let reply: Message
@@ -131,7 +102,7 @@ async function callback(query: CallbackQuery) {
                         disable_web_page_preview: true
                     })
 
-                    let listen:number = bot.onReplyToMessage(reply.chat.id, reply.message_id, handlerAdd)
+                    let listen: number = bot.onReplyToMessage(reply.chat.id, reply.message_id, (msg) => { handlerAdd(query.id, msg, message.chat.id, message.message_id) })
                     setTimeout(() => {
                         deleteMessage(reply, 1)
                         bot.removeReplyListener(listen)
@@ -139,46 +110,46 @@ async function callback(query: CallbackQuery) {
                     break;
                 case 'delete':
                     deleteMessage(query.message, 0)
-                    roomdelete(query.from.id, Number(args[2]))
+                    roomdelete1(query.id, Number(args[2]), message.chat.id, Number(args[3]))
                     break;
                 case 'start':
-                    roomdefault(query.from.id, 'start', Number(args[2]))
+                    roomdefault1(query.id, 'start', Number(args[2]), message.chat.id, Number(args[3]))
                     break;
                 case 'stop':
-                    roomdefault(query.from.id, 'stop', Number(args[2]))
+                    roomdefault1(query.id, 'stop', Number(args[2]), message.chat.id, Number(args[3]))
                     break;
                 case 'auto_on':
-                    set(query.from.id, 'autoRecord', 'true', '', Number(args[2]))
+                    set1(query.id, 'autoRecord', 'true', '', Number(args[2]), message.chat.id, Number(args[3]))
                     break;
                 case 'auto_off':
-                    set(query.from.id, 'autoRecord', 'false', '', Number(args[2]))
+                    set1(query.id, 'autoRecord', 'false', '', Number(args[2]), message.chat.id, Number(args[3]))
                     break;
                 default:
                     keyboard = [
                         [
                             {
                                 text: '开始',
-                                callback_data: `bilibilicontrol start ${args[2]}`
+                                callback_data: `bilibilicontrol start ${args[2]} ${message.message_id}`
                             },
                             {
                                 text: '停止',
-                                callback_data: `bilibilicontrol stop ${args[2]}`
+                                callback_data: `bilibilicontrol stop ${args[2]} ${message.message_id}`
                             }
                         ],
                         [
                             {
                                 text: 'Auto on',
-                                callback_data: `bilibilicontrol auto_on ${args[2]}`
+                                callback_data: `bilibilicontrol auto_on ${args[2]} ${message.message_id}`
                             },
                             {
                                 text: 'Auto off',
-                                callback_data: `bilibilicontrol auto_off ${args[2]}`
+                                callback_data: `bilibilicontrol auto_off ${args[2]} ${message.message_id}`
                             }
                         ],
                         [
                             {
                                 text: '删除',
-                                callback_data: `bilibilicontrol delete ${args[2]}`
+                                callback_data: `bilibilicontrol delete ${args[2]} ${message.message_id}`
                             }
                         ]
                     ]
@@ -199,20 +170,48 @@ async function callback(query: CallbackQuery) {
 
 }
 
+async function getMessage() {
+    let an_jian: InlineKeyboardButton[][] = [[{ text: '增加', callback_data: `bilibilicontrol add` }]]
+    await axios.get(`${BURL}/api/room`, config1)
+        .then(response => {
+            let row = []
+            response.data.forEach((room: { streaming: boolean; recording: boolean; name: string; roomId: number; }, index: number) => {
+                row.push({
+                    text: `${room.streaming === true ? (room.recording === true ? '✓' : '✗') : ''} ${room.name}`,
+                    callback_data: `bilibilicontrol ${room.name} ${room.roomId}`
+                })
 
-async function handlerAdd(msg: Message) {
+                // 每添加两个按键，就将该行按键添加到按键列表
+                if ((index + 1) % 2 === 0) {
+                    an_jian.push(row)
+                    row = []
+                }
+            })
+
+            // 如果最后还有剩余的按键，则添加到列表中
+            if (row.length > 0) {
+                an_jian.push(row)
+            }
+        }).catch(error => { console.error(error); });
+
+    return an_jian
+}
+
+async function handlerAdd(id: string, msg: Message, chatId: number, messageId: number) {
     deleteMessage(msg.reply_to_message, 2)
     deleteMessage(msg, 2)
     //console.log(`add:${msg}`)
     const data = { roomId: msg.text, autoRecord: 'false' };
-    axios.post(`${BURL}/api/room`, data, config2).then((response) => {
-        bot.sendMessage(msg.from.id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) })
+    await axios.post(`${BURL}/api/room`, data, config2).then((response) => {
+        bot.answerCallbackQuery(id, { text: response.status === 200 ? '成功' : '失败', show_alert: false });
+        //bot.sendMessage(msg.from.id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) })
         //console.log(response.status);
     }).catch(error => { console.error(error); });
+    updateList(chatId, messageId)
+
 }
 
-
-function help(id:number) {
+function help(id: number) {
     bot.sendMessage(id, `
 <code>/bili help</code>
 *显示帮助\n
@@ -245,7 +244,7 @@ function help(id:number) {
     `, { parse_mode: "HTML" }).then(res => { deleteMessage(res, 300) })
 }
 
-function roomlist(id:number) {
+function roomlist(id: number) {
     axios.get(`${BURL}/api/room`, config1)
         .then(response => {
             //打印列表
@@ -257,7 +256,7 @@ function roomlist(id:number) {
         }).catch(error => { console.error(error); });
 }
 
-function roomdefault(id:number, action:string, RoomId:number) {
+function roomdefault(id: number, action: string, RoomId: number) {
     const url = `${BURL}/api/room/${RoomId}/${action}`;
     axios.post(url, {}, config1)
         .then(response => {
@@ -265,7 +264,17 @@ function roomdefault(id:number, action:string, RoomId:number) {
         }).catch(error => { console.error(error); });
 }
 
-function roomadd(id:number, RoomId:number, AutoRecord:boolean) {
+async function roomdefault1(id: string, action: string, RoomId: number, chatId: number, messageId: number) {
+    const url = `${BURL}/api/room/${RoomId}/${action}`;
+    await axios.post(url, {}, config1)
+        .then(response => {
+            bot.answerCallbackQuery(id, { text: response.status === 200 ? '成功' : '失败', show_alert: false });
+            //bot.sendMessage(id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) });
+        }).catch(error => { console.error(error); });
+    updateList(chatId, messageId)
+}
+
+function roomadd(id: number, RoomId: number, AutoRecord: boolean) {
     const data = { roomId: RoomId, autoRecord: AutoRecord };
     axios.post(`${BURL}/api/room`, data, config2).then((response) => {
         bot.sendMessage(id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) })
@@ -273,7 +282,7 @@ function roomadd(id:number, RoomId:number, AutoRecord:boolean) {
     }).catch(error => { console.error(error); });
 }
 
-function roomdelete(id:number, RoomId:number) {
+function roomdelete(id: number, RoomId: number) {
     let url = `${BURL}/api/room/${RoomId}`
     axios.delete(url, config1).then(response => {
         bot.sendMessage(id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) })
@@ -281,14 +290,24 @@ function roomdelete(id:number, RoomId:number) {
     }).catch(error => { console.error(error); });
 }
 
-function readjson(id:number, path1:string, path2:string, path3:string) {
+async function roomdelete1(id: string, RoomId: number, chatId: number, messageId: number) {
+    let url = `${BURL}/api/room/${RoomId}`
+    await axios.delete(url, config1).then(response => {
+        bot.answerCallbackQuery(id, { text: response.status === 200 ? '成功' : '失败', show_alert: false });
+        //bot.sendMessage(id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) })
+        //console.log(response.data);
+    }).catch(error => { console.error(error); });
+    updateList(chatId, messageId)
+}
+
+function readjson(id: number, path1: string, path2: string, path3: string) {
     axios.get(`${BURL}/api${path1}${path2}${path3}`, config1).then(response => {
         bot.sendMessage(id, `<pre>${JSON.stringify(response.data, null, 2)}</pre>`, { parse_mode: "HTML" }).then(res => { deleteMessage(res, 300) })
     }).catch(error => { console.error(error); });
 }
 
-function set(id:number, setname:string, hasValue:string, value:string, RoomId:number) {
-    let configData:string;
+function set(id: number, setname: string, hasValue: string, value: string, RoomId: number) {
+    let configData: string;
     let url = ``
     switch (setname) {
         case 'help':
@@ -356,4 +375,42 @@ function set(id:number, setname:string, hasValue:string, value:string, RoomId:nu
             //console.error(error); 
         });
 
+}
+
+async function set1(id: string, setname: string, hasValue: string, value: string, RoomId: number, chatId: number, messageId: number) {
+    let configData = `{"${setname}":${hasValue}}`
+    let url = ``
+    if (RoomId === 0) {
+        url = `${BURL}/api/config/global`
+    } else {
+        url = `${BURL}/api/room/${RoomId}/config`
+    }
+    //console.log(`:${RoomId}-${configData}`)
+    await axios.post(url, configData, config3)
+        .then(response => {
+            bot.answerCallbackQuery(id, { text: response.status === 200 ? '成功' : '失败', show_alert: false });
+            //bot.sendMessage(id, response.status === 200 ? '成功' : '失败').then(res => { deleteMessage(res, 15) })
+            //console.log(response.data);
+        }).catch(error => {
+            bot.answerCallbackQuery(id, { text: error.response.status === 400 ? '请重新输入' : '', show_alert: true });
+            //bot.sendMessage(id, error.response.status === 400 ? '请重新输入' : '').then(res => { deleteMessage(res, 15) })
+            //console.error(error); 
+        });
+    updateList(chatId, messageId)
+
+}
+
+async function updateList(chatId: number, messageId: number) {
+    setTimeout(async () => {
+        const an_jian: InlineKeyboardButton[][] = await getMessage()
+        try {
+            await bot.editMessageReplyMarkup({ inline_keyboard: an_jian }, {
+                chat_id: chatId,
+                message_id: messageId
+            })
+        } catch (error) {
+            console.error(error.message);
+        }
+
+    }, 3 * 1000);
 }
