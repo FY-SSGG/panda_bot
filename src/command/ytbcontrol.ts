@@ -500,5 +500,5 @@ async function updateList(chatId: number, messageId: number) {
       console.error(error.message);
     }
 
-  }, 2 * 1000);
+  }, 3 * 1000);
 }
