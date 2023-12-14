@@ -67,7 +67,7 @@ async function handler(msg: Message) {
 
 async function call(query: CallbackQuery) {
   const { data, message } = query
-  //console.log(JSON.stringify(query, null, 2))
+  //console.error(JSON.stringify(query, null, 2))
   const args = data?.split(" ")
   let reply: Message;
   let keyboard: InlineKeyboardButton[][];
@@ -150,15 +150,16 @@ async function call(query: CallbackQuery) {
                 callback_data: `ytbcontrol exit`
               }
             ]
-          ]
+          ];
+          bot.editMessageReplyMarkup({ inline_keyboard: keyboard }, {
+            chat_id: message.chat.id,
+            message_id: message.message_id
+          }).catch(error => console.log(error));
           bot.editMessageText('是否自动录制', {
             chat_id: message.chat.id,
             message_id: message.message_id
           });
-          bot.editMessageReplyMarkup({ inline_keyboard: keyboard }, {
-            chat_id: message.chat.id,
-            message_id: message.message_id
-          })
+
           //rwConfig(query.id, args[3], event[args[3]].channelName, args[2], message.chat.id, Number(args[4]))
           break;
         case 'add_2':
@@ -395,7 +396,7 @@ function channelidGet(id: string, msg: Message, messageId: number) {
         reply_markup: {
           inline_keyboard: keyboard
         }
-      }).then(res => { deleteMessage(res, 20) })
+      }).then(res => { deleteMessage(res, 30) })
     })
     .catch(error => {
       bot.answerCallbackQuery(id, { text: '无效', show_alert: false });
